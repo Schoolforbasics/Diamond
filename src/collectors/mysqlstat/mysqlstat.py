@@ -59,6 +59,9 @@ class MySQLCollector(diamond.collector.Collector):
         'Qcache_free_blocks', 'Qcache_free_memory',
         'Qcache_queries_in_cache', 'Qcache_total_blocks',
         'Seconds_Behind_Master',
+        'Slave_running',
+        'Slave_IO_Running',
+        'Slave_SQL_Running',
         'Slave_open_temp_tables',
         'Threads_cached', 'Threads_connected', 'Threads_created',
         'Threads_running',
@@ -333,7 +336,8 @@ class MySQLCollector(diamond.collector.Collector):
         rows = self.get_db_global_status()
         for row in rows:
             try:
-                metrics['status'][row['Variable_name']] = float(row['Value'])
+                metrics['status'][row['Variable_name']] = self._parse_value(
+                    row['Value'])
             except:
                 pass
 
@@ -346,7 +350,8 @@ class MySQLCollector(diamond.collector.Collector):
                         if key in self._IGNORE_KEYS:
                             continue
                         try:
-                            metrics['master'][key] = float(row_master[key])
+                            metrics['master'][key] = self._parse_value(
+                                row_master[key])
                         except:
                             pass
             except:
@@ -362,7 +367,8 @@ class MySQLCollector(diamond.collector.Collector):
                         if key in self._IGNORE_KEYS:
                             continue
                         try:
-                            metrics['slave'][key] = float(row_slave[key])
+                            metrics['slave'][key] = self._parse_value(
+                                row_slave[key])
                         except:
                             pass
             except:
@@ -416,6 +422,13 @@ class MySQLCollector(diamond.collector.Collector):
         self.disconnect()
 
         return metrics
+
+    def _parse_value(self, value):
+        if value == 'ON' or value == 'Yes':
+            return 1.
+        elif value == 'OFF' or value == 'No':
+            return 0.
+        return float(value)
 
     def _publish_stats(self, nickname, metrics):
 
